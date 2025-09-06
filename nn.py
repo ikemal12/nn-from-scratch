@@ -11,7 +11,8 @@ def ReLU(Z):
     return np.maximum(0, Z)
 
 def softmax(Z):
-    return np.exp(Z) / sum(np.exp(Z))
+    expZ = np.exp(Z - np.max(Z, axis=0, keepdims=True))
+    return expZ / np.sum(expZ, axis=0, keepdims=True)
 
 def forward_prop(W1, b1, W2, b2, X):
     Z1 = W1.dot(X) + b1
@@ -28,16 +29,17 @@ def one_hot(Y):
 def deriv_ReLU(Z):
     return Z > 0
 
-def back_prop(Z1, A1, Z2, A2, W2, Y):
+def back_prop(Z1, A1, Z2, A2, W2, X, Y):
     m = Y.size
     one_hot_Y = one_hot(Y)
     dZ2 = A2 - one_hot_Y
     dW2 = 1 / m * dZ2.dot(A1.T)
-    db2 = 1 / m * np.sum(dZ2, 2)
+    db2 = 1 / m * np.sum(dZ2, axis=1, keepdims=True)  # Sum across samples, keep shape (10,1)
+
     dZ1 = W2.T.dot(dZ2) * deriv_ReLU(Z1)
     dW1 = 1 / m * dZ1.dot(X.T)
-    db1 = 1 / m * np.sum(dZ1, 2)
-    return dW1, db1, dW2, db2 
+    db1 = 1 / m * np.sum(dZ1, axis=1, keepdims=True)  
+    return dW1, db1, dW2, db2
 
 def update_params(W1, b1, W2, b2, dW1, db1, dW2, db2, alpha):
     W1 = W1 - alpha * dW1
@@ -63,5 +65,5 @@ def gradient_descent(X, Y, iterations, alpha):
         if i % 10 == 0:
             print("Iteration: ", i)
             print("Accuracy: ", get_accuracy(get_predictions(A2), Y))
-            
+
     return W1, b1, W2, b2
